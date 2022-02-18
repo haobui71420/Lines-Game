@@ -13,7 +13,7 @@ public class GameManager : MonoBehaviour
 	private GameObject selection;
 
 	[SerializeField]
-	public int[,] grid;
+	public int[,,] grid;
 	[SerializeField]
 	private Color[] colors = new Color[6];
 
@@ -24,12 +24,17 @@ public class GameManager : MonoBehaviour
 	public Text scoreText;
 	private int points = 0;
 	private int[] previewColors = new int[3];
+	private int[] previewTypes = new int[3];
 	List<GameObject> previewBalls = new List<GameObject>();
+
+	public GameObject explosion;
 
 	public Image fadedBackground;
 	public Text finalScore;
 	public Text highScore;
 	public Button btnRestart;
+
+
 	private void Awake()
 	{
 		manager = this;
@@ -57,7 +62,11 @@ public class GameManager : MonoBehaviour
 		for (int i = 0; i < 3; i++)
 		{
 			previewColors[i] = Random.Range(0, 6);
+			int type = Random.Range(0, 10);
+			if(type < 3){ previewTypes[i] = 0; } else { previewTypes[i] = -1; }
+
 		}
+
 		for (int i = 0; i < 3; i++)
 		{
 			GameObject ball = ObjectPool.instance.GetPooledObject();
@@ -65,6 +74,14 @@ public class GameManager : MonoBehaviour
 
 			ball.transform.position = new Vector2(3f + i * 1.5f, 10f);
 			ball.transform.GetChild(0).GetComponent<SpriteRenderer>().color = colors[previewColors[i]];
+			if(previewTypes[i] == 0)
+			{
+				ball.transform.GetChild(0).GetChild(0).gameObject.SetActive(true);
+			}
+			else
+			{
+				ball.transform.GetChild(0).GetChild(0).gameObject.SetActive(false);
+			}
 			ball.SetActive(true);
 			previewBalls.Add(ball);
 		}
@@ -80,14 +97,14 @@ public class GameManager : MonoBehaviour
 				x = Random.Range(0, 9);
 				y = Random.Range(0, 9);
 			}
-			while (grid[x, y] != -1);
+			while (grid[x, y, 0] != -1);
 
 			previewBalls[i].transform.position = new Vector2(x + 0.5f, y + 0.5f);
-			grid[x, y] = previewColors[i];
-			
+			grid[x, y, 0] = previewColors[i];
+			grid[x, y, 1] = previewTypes[i];
 
 			UpdatePathFindingGrid();
-			PointUpdate(x, y, grid[x, y]);
+			PointUpdate(x, y, grid[x, y, 0]);
 		}
 		previewBalls.Clear();
 		PreviewBall();
@@ -139,9 +156,9 @@ public class GameManager : MonoBehaviour
 						return;
 					}
 
-					grid[x, y] = grid[startPos[0], startPos[1]];
-					grid[startPos[0], startPos[1]] = -1;
-
+					grid[x, y, 0] = grid[startPos[0], startPos[1], 0];
+					grid[startPos[0], startPos[1], 0] = -1;
+					grid[startPos[0], startPos[1], 1] = -1;
 					StartCoroutine(Move(path, x, y));
 				}
 				
@@ -161,12 +178,13 @@ public class GameManager : MonoBehaviour
 
 	private void GenerateGrid()
 	{
-		grid = new int[9, 9];
+		grid = new int[9, 9, 2];
 		for (int x = 0; x < 9; x++)
 		{
 			for (int y = 0; y < 9; y++)
 			{
-				grid[x, y] = -1;
+				grid[x, y, 0] = -1;
+				grid[x, y, 1] = -1;
 			}
 		}
 	}
@@ -184,7 +202,7 @@ public class GameManager : MonoBehaviour
 		isMoving = false;
 
 		UpdatePathFindingGrid();
-		PointUpdate(endX, endY, grid[endX, endY]);
+		PointUpdate(endX, endY, grid[endX, endY, 0]);
 		SpawnBall();
 	}
 	
@@ -194,7 +212,8 @@ public class GameManager : MonoBehaviour
 		{
 			for(int y = 0; y < 9; y ++)
 			{
-				pathFinder.grid[x, y].colorCode = grid[x, y];
+				pathFinder.grid[x, y].colorCode = grid[x, y, 0];
+				pathFinder.grid[x, y].typeCode = grid[x, y, 1];
 			}
 		}
 	}
@@ -210,12 +229,12 @@ public class GameManager : MonoBehaviour
 		for (int i = 0; i < 9; i++)
 		{
 
-			if (grid[x, i] == c)
+			if (grid[x, i, 0] == c)
 				vLine.Add(new int[] { x, i });
 			else if (vLine.Count < 5)
 				vLine.Clear();
 
-			if (grid[i, y] == c)
+			if (grid[i, y, 0] == c)
 				hLine.Add(new int[] { i, y });
 			else if (hLine.Count < 5)
 				hLine.Clear();
@@ -225,14 +244,14 @@ public class GameManager : MonoBehaviour
 		{
 			if(x - i > -1 && y - i > -1)
 			{
-				if (grid[x - i, y - i] == c) { d1Line.Add(new int[] { x - i, y - i }); Debug.Log("lower " +d1Line.Count); } else { break; }
+				if (grid[x - i, y - i, 0] == c) { d1Line.Add(new int[] { x - i, y - i }); } else { break; }
 			}
 		}
 		for (int i = 1; i < 9; i++)
 		{
 			if (x + i < 9 && y + i < 9)
 			{
-				if (grid[x + i, y + i] == c) { d1Line.Add(new int[] { x + i, y + i }); Debug.Log("upper " + d1Line.Count); } else { break; }
+				if (grid[x + i, y + i, 0] == c) { d1Line.Add(new int[] { x + i, y + i }); } else { break; }
 			}
 		}
 
@@ -240,14 +259,14 @@ public class GameManager : MonoBehaviour
 		{
 			if (x - i > -1 && y + i < 9)
 			{
-				if (grid[x - i, y + i] == c) { d2Line.Add(new int[] { x - i, y + i }); } else { break; }
+				if (grid[x - i, y + i, 0] == c) { d2Line.Add(new int[] { x - i, y + i }); } else { break; }
 			}
 		}
 		for (int i = 1; i < 9; i++)
 		{
 			if (x + i < 9 && y - i > -1)
 			{
-				if (grid[x + i, y - i] == c) { d2Line.Add(new int[] { x + i, y - i }); } else { break; }
+				if (grid[x + i, y - i, 0] == c) { d2Line.Add(new int[] { x + i, y - i }); } else { break; }
 			}
 		}
 		#endregion
@@ -310,9 +329,15 @@ public class GameManager : MonoBehaviour
 		
 		if(hit.collider != null)
 		{
+			hit.transform.GetChild(0).gameObject.SetActive(false);
 			hit.transform.parent.gameObject.SetActive(false);
-			grid[x, y] = -1;
+			
+			grid[x, y, 0] = -1;
+			grid[x, y, 1] = -1;
 			UpdatePathFindingGrid();
+			GameObject tmp = Instantiate(explosion, position, Quaternion.identity);
+			Destroy(tmp, 0.5f);
+
 		}
 	}
 

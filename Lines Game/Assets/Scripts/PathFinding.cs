@@ -53,7 +53,7 @@ public class PathFinding : MonoBehaviour
             openList.Remove(currentTile);
             closedList.Add(currentTile);
 
-            foreach(Tile neighborTile in GetNeighborTile(currentTile))
+            foreach(Tile neighborTile in GetNeighborTile(currentTile, startTile))
             {
                 if (closedList.Contains(neighborTile)) continue;
                 int tentativeCost = currentTile.gCost + CalculateDistance(currentTile, neighborTile);
@@ -76,22 +76,22 @@ public class PathFinding : MonoBehaviour
         return null;
     }
 
-    private List<Tile> GetNeighborTile(Tile currentTile)
+    private List<Tile> GetNeighborTile(Tile currentTile, Tile startTile)
     {
         List<Tile> neighborList = new List<Tile>();
-        if(currentTile.x - 1 >= 0 && grid[currentTile.x - 1, currentTile.y].colorCode == -1)
+        if(currentTile.x - 1 >= 0 && (grid[currentTile.x - 1, currentTile.y].colorCode == -1 || startTile.typeCode == 0))
         {
             neighborList.Add(grid[currentTile.x - 1, currentTile.y]);
 		}
-        if(currentTile.x + 1 < 9 && grid[currentTile.x + 1, currentTile.y].colorCode == -1)
+        if(currentTile.x + 1 < 9 && (grid[currentTile.x + 1, currentTile.y].colorCode == -1 || startTile.typeCode == 0))
         {
             neighborList.Add(grid[currentTile.x + 1, currentTile.y]);
 		}
-        if (currentTile.y - 1 >= 0 && grid[currentTile.x, currentTile.y - 1].colorCode == -1)
+        if (currentTile.y - 1 >= 0 && (grid[currentTile.x, currentTile.y - 1].colorCode == -1 || startTile.typeCode == 0))
         {
             neighborList.Add(grid[currentTile.x, currentTile.y - 1]);
         }
-        if (currentTile.y + 1 < 9 && grid[currentTile.x, currentTile.y + 1].colorCode == -1)
+        if (currentTile.y + 1 < 9 && (grid[currentTile.x, currentTile.y + 1].colorCode == -1 || startTile.typeCode == 0))
         {
             neighborList.Add(grid[currentTile.x, currentTile.y + 1]);
         }

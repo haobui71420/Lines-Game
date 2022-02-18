@@ -2264,6 +2264,7 @@ MonoBehaviour:
   - {r: 0.80006886, g: 0, b: 1, a: 1}
   - {r: 0, g: 1, b: 0.9070401, a: 1}
   scoreText: {fileID: 1629379948}
+  explosion: {fileID: 4479601526301553901, guid: 729e8aaf56e57a842b4835c4391c2acc, type: 3}
   fadedBackground: {fileID: 799965431}
   finalScore: {fileID: 433517885}
   highScore: {fileID: 728672047}
