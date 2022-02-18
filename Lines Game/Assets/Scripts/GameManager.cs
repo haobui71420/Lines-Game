@@ -26,6 +26,10 @@ public class GameManager : MonoBehaviour
 	private int[] previewColors = new int[3];
 	List<GameObject> previewBalls = new List<GameObject>();
 
+	public Image fadedBackground;
+	public Text finalScore;
+	public Text highScore;
+	public Button btnRestart;
 	private void Awake()
 	{
 		manager = this;
@@ -35,6 +39,7 @@ public class GameManager : MonoBehaviour
 	void Start()
 	{
 		pathFinder = new PathFinding();
+		highScore.text = "Highscore: " + PlayerPrefs.GetInt("Highscore");
 		SpawnBall();
 	}
 
@@ -45,9 +50,9 @@ public class GameManager : MonoBehaviour
 
 	void PreviewBall()
 	{
-		if(ObjectPool.instance.count < 1)
+		if(ObjectPool.instance.GetPooledObject() == null)
 		{
-			//end game
+			EndGame();
 		}
 		for (int i = 0; i < 3; i++)
 		{
@@ -313,6 +318,18 @@ public class GameManager : MonoBehaviour
 
 	void EndGame()
 	{
-		
+		fadedBackground.gameObject.SetActive(true);
+		finalScore.text = "YOUR SCORE \n" + points.ToString();
+		if(points > PlayerPrefs.GetInt("Highscore"))
+		{
+			PlayerPrefs.SetInt("Highscore", points);
+		}
+		finalScore.gameObject.SetActive(true);
+		btnRestart.gameObject.SetActive(true);
+	}
+
+	IEnumerator Wait(float time)
+	{
+		yield return new WaitForSeconds(time);
 	}
 }

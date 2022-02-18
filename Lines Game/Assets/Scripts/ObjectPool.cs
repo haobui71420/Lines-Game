@@ -9,12 +9,10 @@ public class ObjectPool : MonoBehaviour
     public GameObject ball;
     [SerializeField]
     private int amount = 81;
-    public int count;
 	private void Awake()
 	{
         instance = this;
         objects = new List<GameObject>();
-
         GameObject tmp;
 
         for (int i = 0; i < amount; i++)
@@ -35,7 +33,6 @@ public class ObjectPool : MonoBehaviour
         {
             if(!objects[i].activeInHierarchy)
             {
-                count--;
                 return objects[i];
 			}
 		}
