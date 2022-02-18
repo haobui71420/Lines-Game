@@ -79,19 +79,19 @@ public class PathFinding : MonoBehaviour
     private List<Tile> GetNeighborTile(Tile currentTile)
     {
         List<Tile> neighborList = new List<Tile>();
-        if(currentTile.x - 1 >= 0)
+        if(currentTile.x - 1 >= 0 && grid[currentTile.x - 1, currentTile.y].colorCode == -1)
         {
             neighborList.Add(grid[currentTile.x - 1, currentTile.y]);
 		}
-        if(currentTile.x + 1 < 9)
+        if(currentTile.x + 1 < 9 && grid[currentTile.x + 1, currentTile.y].colorCode == -1)
         {
             neighborList.Add(grid[currentTile.x + 1, currentTile.y]);
 		}
-        if (currentTile.y - 1 >= 0)
+        if (currentTile.y - 1 >= 0 && grid[currentTile.x, currentTile.y - 1].colorCode == -1)
         {
             neighborList.Add(grid[currentTile.x, currentTile.y - 1]);
         }
-        if (currentTile.y + 1 < 9)
+        if (currentTile.y + 1 < 9 && grid[currentTile.x, currentTile.y + 1].colorCode == -1)
         {
             neighborList.Add(grid[currentTile.x, currentTile.y + 1]);
         }

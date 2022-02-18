@@ -58,6 +58,7 @@ public class GameManager : MonoBehaviour
 				ball.transform.GetChild(0).GetComponent<SpriteRenderer>().color = colors[c];
 				ball.SetActive(true);
 				grid[x, y] = c;
+				UpdatePathFindingGrid();
 			}
 		}
 	}
@@ -102,6 +103,7 @@ public class GameManager : MonoBehaviour
 					Destroy(objectToMove.transform.GetChild(1).gameObject);
 					grid[endPos[0], endPos[1]] = grid[startPos[0], startPos[1]];
 					grid[startPos[0], startPos[1]] = -1;
+					UpdatePathFindingGrid();
 					StartCoroutine(Move(path));
 				}
 				
@@ -145,9 +147,12 @@ public class GameManager : MonoBehaviour
 	}
 	void UpdatePathFindingGrid()
 	{
-		for( int i = 0; i < 9; i ++)
+		for( int x = 0; x < 9; x ++)
 		{
-	
+			for(int y = 0; y < 9; y ++)
+			{
+				pathFinder.grid[x, y].colorCode = grid[x, y];
+			}
 		}
 	}
 }
