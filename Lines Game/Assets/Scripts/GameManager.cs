@@ -1,7 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-
+using UnityEngine.UI;
 
 public class GameManager : MonoBehaviour
 {
@@ -21,10 +21,16 @@ public class GameManager : MonoBehaviour
 	private GameObject objectToMove;
 	private PathFinding pathFinder;
 
+	public Text scoreText;
+	private int points = 0;
+	private int[] previewColors = new int[3];
+	List<GameObject> previewBalls = new List<GameObject>();
+
 	private void Awake()
 	{
 		manager = this;
 		GenerateGrid();
+		PreviewBall();
 	}
 	void Start()
 	{
@@ -37,9 +43,31 @@ public class GameManager : MonoBehaviour
 		BallControl();
 	}
 
+	void PreviewBall()
+	{
+		if(ObjectPool.instance.count < 1)
+		{
+			//end game
+		}
+		for (int i = 0; i < 3; i++)
+		{
+			previewColors[i] = Random.Range(0, 6);
+		}
+		for (int i = 0; i < 3; i++)
+		{
+			GameObject ball = ObjectPool.instance.GetPooledObject();
+			if (ball == null) return;
+
+			ball.transform.position = new Vector2(3f + i * 1.5f, 10f);
+			ball.transform.GetChild(0).GetComponent<SpriteRenderer>().color = colors[previewColors[i]];
+			ball.SetActive(true);
+			previewBalls.Add(ball);
+		}
+	}
+
 	void SpawnBall()
 	{
-		for(int i = 0; i < 3; i++)
+		for(int i = 0; i < previewBalls.Count; i++)
 		{
 			int x, y;
 			do
@@ -49,18 +77,15 @@ public class GameManager : MonoBehaviour
 			}
 			while (grid[x, y] != -1);
 
-			int c = Random.Range(0, 6);
-			GameObject ball = ObjectPool.instance.GetPooledObject();
+			previewBalls[i].transform.position = new Vector2(x + 0.5f, y + 0.5f);
+			grid[x, y] = previewColors[i];
+			
 
-			if (ball != null)
-			{
-				ball.transform.position = new Vector2(x + 0.5f, y + 0.5f);
-				ball.transform.GetChild(0).GetComponent<SpriteRenderer>().color = colors[c];
-				ball.SetActive(true);
-				grid[x, y] = c;
-				UpdatePathFindingGrid();
-			}
+			UpdatePathFindingGrid();
+			PointUpdate(x, y, grid[x, y]);
 		}
+		previewBalls.Clear();
+		PreviewBall();
 	}
 
 	void BallControl()
@@ -82,29 +107,37 @@ public class GameManager : MonoBehaviour
 				{
 					if (hit.collider != null && hit.transform.name == "Ball child")
 					{
-						Debug.Log("hit bald child");
 						objectToMove = hit.transform.parent.gameObject;
 						GameObject tmp = Instantiate(selection, position, Quaternion.identity);
 						tmp.transform.parent = objectToMove.transform;
 					}
+					
 				}
-				else if(hit.collider == null)
+				else if(hit.collider != null)
+				{
+					Destroy(objectToMove.transform.GetChild(1).gameObject);
+					objectToMove = null;
+					isMoving = false;
+				}
+				else if (hit.collider == null)
 				{
 					isMoving = true;
 					int[] startPos = { Mathf.FloorToInt(objectToMove.transform.position.x), Mathf.FloorToInt(objectToMove.transform.position.y) };
-					int[] endPos = { Mathf.FloorToInt(position.x), Mathf.FloorToInt(position.y) };
-					List<Tile> path = pathFinder.FindPath(startPos[0], startPos[1], endPos[0], endPos[1]);
+					List<Tile> path = pathFinder.FindPath(startPos[0], startPos[1], x, y);
 
-					if(path == null)
+					Destroy(objectToMove.transform.GetChild(1).gameObject);
+					if (path == null)
 					{
 						Debug.Log("Cant find path");
+						objectToMove = null;
+						isMoving = false;
 						return;
 					}
-					Destroy(objectToMove.transform.GetChild(1).gameObject);
-					grid[endPos[0], endPos[1]] = grid[startPos[0], startPos[1]];
+
+					grid[x, y] = grid[startPos[0], startPos[1]];
 					grid[startPos[0], startPos[1]] = -1;
-					UpdatePathFindingGrid();
-					StartCoroutine(Move(path));
+
+					StartCoroutine(Move(path, x, y));
 				}
 				
 
@@ -133,18 +166,23 @@ public class GameManager : MonoBehaviour
 		}
 	}
 
-	IEnumerator Move(List<Tile> path)
+	IEnumerator Move(List<Tile> path, int endX, int endY)
 	{
 		int i = 0;
 		while (i < path.Count)
 		{
 			BallMove(new Vector2(path[i].x + 0.5f, path[i].y + 0.5f));
 			i++;
-			yield return new WaitForSeconds(0.1f);
+			yield return new WaitForSeconds(0.01f);
 		}
 		objectToMove = null;
 		isMoving = false;
+
+		UpdatePathFindingGrid();
+		PointUpdate(endX, endY, grid[endX, endY]);
+		SpawnBall();
 	}
+	
 	void UpdatePathFindingGrid()
 	{
 		for( int x = 0; x < 9; x ++)
@@ -154,5 +192,127 @@ public class GameManager : MonoBehaviour
 				pathFinder.grid[x, y].colorCode = grid[x, y];
 			}
 		}
+	}
+
+	void PointUpdate(int x , int y, int c)
+	{
+		List<int[]> vLine = new List<int[]>();
+		List<int[]> hLine = new List<int[]>();
+		List<int[]> d1Line = new List<int[]>();
+		List<int[]> d2Line = new List<int[]>();
+
+		#region get lines
+		for (int i = 0; i < 9; i++)
+		{
+
+			if (grid[x, i] == c)
+				vLine.Add(new int[] { x, i });
+			else if (vLine.Count < 5)
+				vLine.Clear();
+
+			if (grid[i, y] == c)
+				hLine.Add(new int[] { i, y });
+			else if (hLine.Count < 5)
+				hLine.Clear();
+		}
+
+		for (int i = 0; i < 9; i++)
+		{
+			if(x - i > -1 && y - i > -1)
+			{
+				if (grid[x - i, y - i] == c) { d1Line.Add(new int[] { x - i, y - i }); Debug.Log("lower " +d1Line.Count); } else { break; }
+			}
+		}
+		for (int i = 1; i < 9; i++)
+		{
+			if (x + i < 9 && y + i < 9)
+			{
+				if (grid[x + i, y + i] == c) { d1Line.Add(new int[] { x + i, y + i }); Debug.Log("upper " + d1Line.Count); } else { break; }
+			}
+		}
+
+		for (int i = 0; i < 9; i++)
+		{
+			if (x - i > -1 && y + i < 9)
+			{
+				if (grid[x - i, y + i] == c) { d2Line.Add(new int[] { x - i, y + i }); } else { break; }
+			}
+		}
+		for (int i = 1; i < 9; i++)
+		{
+			if (x + i < 9 && y - i > -1)
+			{
+				if (grid[x + i, y - i] == c) { d2Line.Add(new int[] { x + i, y - i }); } else { break; }
+			}
+		}
+		#endregion
+		#region add point
+		if (vLine.Count >= 5)
+		{
+
+			Debug.Log("vline " + vLine.Count);
+			points += vLine.Count * 10;
+			scoreText.text = "Score: " + points;
+			for(int i = 0; i < vLine.Count; i ++)
+			{
+				DestroyBall(vLine[i][0], vLine[i][1]);
+			}
+			vLine.Clear();
+		}
+
+		if (hLine.Count >= 5)
+		{
+			Debug.Log("hline " + hLine.Count);
+			points += hLine.Count * 10;
+			scoreText.text = "Score: " + points;
+			for (int i = 0; i < hLine.Count; i++)
+			{
+				DestroyBall(hLine[i][0], hLine[i][1]);
+			}
+			hLine.Clear();
+		}
+
+		if (d1Line.Count >= 5)
+		{
+			Debug.Log("d1line " + d1Line.Count);
+			points += d1Line.Count * 10;
+			scoreText.text = "Score: " + points;
+			for (int i = 0; i < d1Line.Count; i++)
+			{
+				DestroyBall(d1Line[i][0], d1Line[i][1]);
+			}
+			d1Line.Clear();
+		}
+
+		if (d2Line.Count >= 5)
+		{
+			Debug.Log("d2line " + d2Line.Count);
+			points += d2Line.Count * 10;
+			scoreText.text = "Score: " + points;
+			for (int i = 0; i < d2Line.Count; i++)
+			{
+				DestroyBall(d2Line[i][0], d2Line[i][1]);
+			}
+			d2Line.Clear();
+		}
+		#endregion
+	}
+
+	private void DestroyBall(int x, int y)
+	{
+		Vector2 position = new Vector2(x + 0.5f, y + 0.5f);
+		RaycastHit2D hit = Physics2D.Raycast(position, Vector2.zero, 0f);
+		
+		if(hit.collider != null)
+		{
+			hit.transform.parent.gameObject.SetActive(false);
+			grid[x, y] = -1;
+			UpdatePathFindingGrid();
+		}
+	}
+
+	void EndGame()
+	{
+		
 	}
 }
